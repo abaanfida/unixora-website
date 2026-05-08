@@ -7,11 +7,17 @@ const MainPage = () => {
     const navigate = useNavigate();
     const [activeNav, setActiveNav] = useState('home');
     const [scrollPosition, setScrollPosition] = useState(0);
+    const [user, setUser] = useState(null);
     const homeRef = useRef(null);
     const aboutRef = useRef(null);
     const footerRef = useRef(null);
 
     useEffect(() => {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            setUser(JSON.parse(userData));
+        }
+
         const handleScroll = () => {
             setScrollPosition(window.scrollY);
         };
@@ -36,6 +42,15 @@ const MainPage = () => {
         // Observe all animatable elements
         const animateElements = document.querySelectorAll('.animate-on-scroll');
         animateElements.forEach(el => observer.observe(el));
+
+        const featureBoxes = document.querySelectorAll('.feature-box');
+        featureBoxes.forEach((box) => {
+            box.addEventListener('mousemove', (e) => {
+                const rect = box.getBoundingClientRect();
+                box.style.setProperty('--x', `${e.clientX - rect.left}px`);
+                box.style.setProperty('--y', `${e.clientY - rect.top}px`);
+            });
+        });
         
         return () => {
             window.removeEventListener('scroll', handleScroll);
@@ -80,11 +95,17 @@ const MainPage = () => {
                             Contacts
                         </button>
                         <button className="nav-link chat-btn" onClick={() => navigate('/chat')}>
-                            💬 Chat
+                            💬 {user ? 'Chat' : 'Dashboard'}
                         </button>
-                        <button className="nav-link signup-btn" onClick={handleGetStarted}>
-                            Sign Up
-                        </button>
+                        {user ? (
+                            <button className="nav-link signup-btn" onClick={() => navigate('/chat')}>
+                                Go to App
+                            </button>
+                        ) : (
+                            <button className="nav-link signup-btn" onClick={handleGetStarted}>
+                                Sign Up
+                            </button>
+                        )}
                     </div>
                 </div>
             </nav>
@@ -104,8 +125,8 @@ const MainPage = () => {
                         <p className="hero-subtitle">
                             Discover 100+ Universities Worldwide. Explore Programs. Find Your Perfect Fit.
                         </p>
-                        <button className="cta-button" onClick={handleGetStarted}>
-                            Get Started
+                        <button className="cta-button" onClick={() => navigate(user ? '/chat' : '/signup')}>
+                            {user ? 'Go to Dashboard' : 'Get Started'}
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                                 <polyline points="12 5 19 12 12 19"></polyline>

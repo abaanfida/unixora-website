@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/ChatPage.css";
+import robotGif from "../styles/output-onlinegiftools.gif";
+import bgVideo from "../styles/10296180-hd_1920_1080_25fps.mp4";
 
 const RAG_API_URL = "http://localhost:8000";
 
@@ -172,6 +174,13 @@ const ChatPage = () => {
   const [hoveredItemId, setHoveredItemId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const messagesEndRef = useRef(null);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 0.8; // Subtle slow motion
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -350,6 +359,17 @@ const ChatPage = () => {
 
   return (
     <div className="chat-container">
+      {/* Background Video */}
+      <video
+        ref={videoRef}
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="background-video"
+      >
+        <source src={bgVideo} type="video/mp4" />
+      </video>
       {/* Sidebar */}
       <div className="chat-sidebar">
         <div className="sidebar-content">
@@ -452,8 +472,16 @@ const ChatPage = () => {
       <div className="chat-main">
         {/* Chat Header */}
         <div className="chat-header">
-          <h1 className="chat-title">Unixora Assistant</h1>
-          <div className="header-buttons">
+          <div className="chat-header-main">
+            <div className="bot-greeting-pill">
+              <img src={robotGif} alt="Robot Assistant" className="robot-icon-gif" />
+              <div className="bot-text-group">
+                <span className="bot-badge">UNIXORA_BOT_ACTIVE</span>
+                <span className="bot-status-sub">SYSTEM READY</span>
+              </div>
+            </div>
+          </div>
+          <div className="chat-header-actions">
             <button className="home-btn" onClick={() => navigate("/")}>
               Home
             </button>
