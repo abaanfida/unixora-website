@@ -4,7 +4,7 @@ import "../styles/ChatPage.css";
 import robotGif from "../styles/output-onlinegiftools.gif";
 import bgVideo from "../styles/10296180-hd_1920_1080_25fps.mp4";
 
-const RAG_API_URL = "http://localhost:8000";
+const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
 
 // Format text with basic markdown-like syntax
 const formatMessageText = (text) => {
