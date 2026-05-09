@@ -24,7 +24,10 @@ const generateToken = (user) => {
   );
 };
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL || '*',
+  credentials: true
+}));
 app.use(express.json());
 
 mongoose
@@ -176,6 +179,11 @@ app.get("/", (req, res) => {
   res.send("Auth service running");
 });
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
-});
+// Only listen when running locally (not on Vercel)
+if (process.env.NODE_ENV !== "production") {
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+  });
+}
+
+module.exports = app;
