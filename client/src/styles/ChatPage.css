@@ -822,8 +822,13 @@
 }
 
 .formatted-content tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.05);
   color: #ffffff;
+}
+
+.formatted-content tr:hover td:first-child {
+  border-left: 2px solid #10a37f;
+  padding-left: 14px; /* Adjust for border */
 }
 
 /* Blockquote Styles */
