@@ -10,37 +10,73 @@ const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
 const formatMessageText = (text) => {
   if (!text) return "";
 
-  // Split into lines for processing
   const lines = text.split("\n");
   const formattedLines = [];
   let inList = false;
   let listItems = [];
+  let inTable = false;
+  let tableRows = [];
 
   const processInlineFormatting = (line) => {
-    // Bold text: **text** or __text__
+    // Bold: **text**
     line = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-    line = line.replace(/__(.*?)__/g, "<strong>$1</strong>");
-
-    // Italic text: *text* or _text_
-    line = line.replace(
-      /(?<!\*)\*(?!\*)([^*]+)(?<!\*)\*(?!\*)/g,
-      "<em>$1</em>"
-    );
-    line = line.replace(/(?<!_)_(?!_)([^_]+)(?<!_)_(?!_)/g, "<em>$1</em>");
-
+    // Italic: *text*
+    line = line.replace(/(?<!\*)\*(?!\*)([^*]+)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
     // Links: [text](url)
-    line = line.replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
-    );
-
+    line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     return line;
   };
 
-  lines.forEach((line, index) => {
+  const flushList = () => {
+    if (inList && listItems.length > 0) {
+      formattedLines.push(`<ul class="formatted-list">${listItems.map(item => `<li>${item}</li>`).join("")}</ul>`);
+      inList = false;
+      listItems = [];
+    }
+  };
+
+  const flushTable = () => {
+    if (inTable && tableRows.length > 0) {
+      const headerRow = tableRows[0];
+      const bodyRows = tableRows.slice(1);
+      formattedLines.push(`
+        <table>
+          <thead>
+            <tr>${headerRow.map(cell => `<th>${cell}</th>`).join("")}</tr>
+          </thead>
+          <tbody>
+            ${bodyRows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      `);
+      inTable = false;
+      tableRows = [];
+    }
+  };
+
+  lines.forEach((line) => {
     const trimmedLine = line.trim();
 
-    // Check for list items (-, *, •, or numbered)
+    // Table detection
+    if (trimmedLine.startsWith("|") && trimmedLine.endsWith("|")) {
+      flushList();
+      inTable = true;
+      if (trimmedLine.match(/^[|\s-]+$/)) return; // Skip separator line
+      const rawCells = trimmedLine.split("|").slice(1, -1);
+      tableRows.push(rawCells.map(cell => processInlineFormatting(cell.trim())));
+      return;
+    } else {
+      flushTable();
+    }
+
+    // Blockquote detection
+    if (trimmedLine.startsWith("> ")) {
+      flushList();
+      formattedLines.push(`<blockquote class="formatted-blockquote">${processInlineFormatting(trimmedLine.slice(2))}</blockquote>`);
+      return;
+    }
+
+    // List detection
     const bulletMatch = trimmedLine.match(/^[-*•]\s+(.+)$/);
     const numberedMatch = trimmedLine.match(/^(\d+)[.)]\s+(.+)$/);
 
@@ -49,56 +85,27 @@ const formatMessageText = (text) => {
         inList = true;
         listItems = [];
       }
-      const content = bulletMatch ? bulletMatch[1] : numberedMatch[2];
-      listItems.push(processInlineFormatting(content));
+      listItems.push(processInlineFormatting(bulletMatch ? bulletMatch[1] : numberedMatch[2]));
     } else {
-      // Close list if we were in one
-      if (inList && listItems.length > 0) {
-        formattedLines.push(
-          `<ul class="formatted-list">${listItems
-            .map((item) => `<li>${item}</li>`)
-            .join("")}</ul>`
-        );
-        listItems = [];
-        inList = false;
-      }
+      flushList();
 
-      // Process headers: # Header
-      if (trimmedLine.match(/^###\s+(.+)$/)) {
-        const content = trimmedLine.replace(/^###\s+/, "");
-        formattedLines.push(
-          `<h4 class="formatted-h4">${processInlineFormatting(content)}</h4>`
-        );
-      } else if (trimmedLine.match(/^##\s+(.+)$/)) {
-        const content = trimmedLine.replace(/^##\s+/, "");
-        formattedLines.push(
-          `<h3 class="formatted-h3">${processInlineFormatting(content)}</h3>`
-        );
-      } else if (trimmedLine.match(/^#\s+(.+)$/)) {
-        const content = trimmedLine.replace(/^#\s+/, "");
-        formattedLines.push(
-          `<h2 class="formatted-h2">${processInlineFormatting(content)}</h2>`
-        );
+      // Headers
+      if (trimmedLine.startsWith("### ")) {
+        formattedLines.push(`<h4 class="formatted-h4">${processInlineFormatting(trimmedLine.slice(4))}</h4>`);
+      } else if (trimmedLine.startsWith("## ")) {
+        formattedLines.push(`<h3 class="formatted-h3">${processInlineFormatting(trimmedLine.slice(3))}</h3>`);
+      } else if (trimmedLine.startsWith("# ")) {
+        formattedLines.push(`<h2 class="formatted-h2">${processInlineFormatting(trimmedLine.slice(2))}</h2>`);
       } else if (trimmedLine === "") {
         formattedLines.push("<br/>");
       } else {
-        formattedLines.push(
-          `<p class="formatted-paragraph">${processInlineFormatting(
-            trimmedLine
-          )}</p>`
-        );
+        formattedLines.push(`<p class="formatted-paragraph">${processInlineFormatting(trimmedLine)}</p>`);
       }
     }
   });
 
-  // Close any remaining list
-  if (inList && listItems.length > 0) {
-    formattedLines.push(
-      `<ul class="formatted-list">${listItems
-        .map((item) => `<li>${item}</li>`)
-        .join("")}</ul>`
-    );
-  }
+  flushList();
+  flushTable();
 
   return formattedLines.join("");
 };
