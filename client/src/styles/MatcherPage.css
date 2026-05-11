@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
+/* Fonts imported in App.css */
 
 :root {
   --gradient-primary: linear-gradient(90deg, #7b61ff 0%, #00cfff 100%);
@@ -18,7 +18,7 @@
   min-height: 100vh;
   background: var(--dark-bg);
   color: var(--text-main);
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Sidebar */
@@ -47,9 +47,10 @@
 }
 
 .brand-text {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -148,8 +149,10 @@
 
 .header-title {
   margin: 0;
-  font-size: 32px;
-  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
   color: var(--text-main);
 }
 
@@ -300,8 +303,9 @@
 
 .section-title {
   margin: 0 0 24px 0;
-  font-size: 20px;
-  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
   color: var(--text-main);
 }
 
@@ -599,8 +603,9 @@
 }
 
 .card-title {
-  font-size: 17px;
-  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text-main);
 }
 

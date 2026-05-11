@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
 :root {
     --bg-color: #121212;
     --text-color: #ffffff;
@@ -13,23 +15,25 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 button {
     cursor: pointer;
     border: none;
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Inter', sans-serif;
 }
 
 input {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Inter', sans-serif;
     outline: none;
 }
 
