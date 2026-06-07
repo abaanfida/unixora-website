@@ -1,50 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap');
 
 :root {
-    --bg-color: #121212;
-    --text-color: #ffffff;
-    --input-bg: #2d2d2d;
-    --input-border: #404040;
-    --primary-color: #7b5eea;
-    /* Violet/Purple from screenshot */
-    --secondary-text: #a0a0a0;
-    --error-color: #ff4d4d;
-}
+    --font-body: 'Instrument Sans', 'Segoe UI', sans-serif;
+    --font-display: 'Newsreader', Georgia, serif;
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}
+    --bg-canvas: #090909;
+    --bg-elevated: #111111;
+    --bg-panel: rgba(18, 18, 18, 0.88);
+    --bg-panel-strong: rgba(24, 24, 24, 0.96);
+    --bg-panel-soft: rgba(255, 255, 255, 0.03);
 
-body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
+    --text-primary: #f4f0e8;
+    --text-secondary: #b9b1a2;
+    --text-tertiary: #8e8679;
 
-button {
-    cursor: pointer;
-    border: none;
-    font-family: 'Inter', sans-serif;
-}
+    --border-soft: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
 
-input {
-    font-family: 'Inter', sans-serif;
-    outline: none;
-}
+    --accent: #8f9d89;
+    --accent-strong: #a8b7a1;
+    --accent-soft: rgba(143, 157, 137, 0.16);
 
-/* Hide native password reveal eye in Edge/IE/Windows */
-input::-ms-reveal,
-input::-ms-clear {
-    display: none;
-}
+    --danger: #d47f7f;
+    --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 14px 40px rgba(0, 0, 0, 0.22);
 
-/* Hide native password reveal eye in Chrome/Safari/Edge/Webkit */
-input::-webkit-password-reveal-button {
-    display: none;
-    -webkit-appearance: none;
+    --radius-sm: 14px;
+    --radius-md: 22px;
+    --radius-lg: 30px;
+
+    --content-width: 1200px;
 }

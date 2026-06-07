@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import WorkspaceNavbar from "../components/WorkspaceNavbar";
 import "../styles/ChatPage.css";
-import robotGif from "../styles/output-onlinegiftools.gif";
-import bgVideo from "../styles/10296180-hd_1920_1080_25fps.mp4";
 
 const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
 
-// Format text with basic markdown-like syntax
 const formatMessageText = (text) => {
   if (!text) return "";
 
@@ -18,18 +16,15 @@ const formatMessageText = (text) => {
   let tableRows = [];
 
   const processInlineFormatting = (line) => {
-    // Bold: **text**
     line = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-    // Italic: *text*
     line = line.replace(/(?<!\*)\*(?!\*)([^*]+)(?<!\*)\*(?!\*)/g, "<em>$1</em>");
-    // Links: [text](url)
     line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     return line;
   };
 
   const flushList = () => {
     if (inList && listItems.length > 0) {
-      formattedLines.push(`<ul class="formatted-list">${listItems.map(item => `<li>${item}</li>`).join("")}</ul>`);
+      formattedLines.push(`<ul class="formatted-list">${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`);
       inList = false;
       listItems = [];
     }
@@ -42,10 +37,10 @@ const formatMessageText = (text) => {
       formattedLines.push(`
         <table>
           <thead>
-            <tr>${headerRow.map(cell => `<th>${cell}</th>`).join("")}</tr>
+            <tr>${headerRow.map((cell) => `<th>${cell}</th>`).join("")}</tr>
           </thead>
           <tbody>
-            ${bodyRows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("")}
+            ${bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}
           </tbody>
         </table>
       `);
@@ -57,26 +52,23 @@ const formatMessageText = (text) => {
   lines.forEach((line) => {
     const trimmedLine = line.trim();
 
-    // Table detection
     if (trimmedLine.startsWith("|") && trimmedLine.endsWith("|")) {
       flushList();
       inTable = true;
-      if (trimmedLine.match(/^[|\s-]+$/)) return; // Skip separator line
+      if (trimmedLine.match(/^[|\s-]+$/)) return;
       const rawCells = trimmedLine.split("|").slice(1, -1);
-      tableRows.push(rawCells.map(cell => processInlineFormatting(cell.trim())));
+      tableRows.push(rawCells.map((cell) => processInlineFormatting(cell.trim())));
       return;
     } else {
       flushTable();
     }
 
-    // Blockquote detection
     if (trimmedLine.startsWith("> ")) {
       flushList();
       formattedLines.push(`<blockquote class="formatted-blockquote">${processInlineFormatting(trimmedLine.slice(2))}</blockquote>`);
       return;
     }
 
-    // List detection
     const bulletMatch = trimmedLine.match(/^[-*•]\s+(.+)$/);
     const numberedMatch = trimmedLine.match(/^(\d+)[.)]\s+(.+)$/);
 
@@ -89,7 +81,6 @@ const formatMessageText = (text) => {
     } else {
       flushList();
 
-      // Headers
       if (trimmedLine.startsWith("### ")) {
         formattedLines.push(`<h4 class="formatted-h4">${processInlineFormatting(trimmedLine.slice(4))}</h4>`);
       } else if (trimmedLine.startsWith("## ")) {
@@ -106,39 +97,27 @@ const formatMessageText = (text) => {
 
   flushList();
   flushTable();
-
   return formattedLines.join("");
 };
 
-// Message component with formatted text
 const FormattedMessage = ({ text, isBot }) => {
   if (!isBot) {
     return <span>{text}</span>;
   }
 
-  const formattedHtml = formatMessageText(text);
-  return (
-    <div
-      className="formatted-content"
-      dangerouslySetInnerHTML={{ __html: formattedHtml }}
-    />
-  );
+  return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: formatMessageText(text) }} />;
 };
 
-// Sources component
 const SourcesSection = ({ sources }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   if (!sources || sources.length === 0) return null;
 
   return (
     <div className="sources-section">
-      <button
-        className="sources-toggle"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <span className="sources-icon">{isExpanded ? "▼" : "▶"}</span>
-        <span>Sources ({sources.length})</span>
+      <button className="sources-toggle" onClick={() => setIsExpanded(!isExpanded)}>
+        <span>Reference material</span>
+        <span className="sources-count">{sources.length}</span>
       </button>
       {isExpanded && (
         <div className="sources-list">
@@ -146,11 +125,9 @@ const SourcesSection = ({ sources }) => {
             <div key={idx} className="source-item">
               <div className="source-header">
                 <span className="source-university">{source.university}</span>
-                {source.program && (
-                  <span className="source-program">• {source.program}</span>
-                )}
+                {source.program && <span className="source-program">{source.program}</span>}
               </div>
-              <p className="source-text">{source.text.substring(0, 200)}...</p>
+              <p className="source-text">{source.text.substring(0, 180)}...</p>
             </div>
           ))}
         </div>
@@ -159,7 +136,6 @@ const SourcesSection = ({ sources }) => {
   );
 };
 
-// Typing indicator component
 const TypingIndicator = () => (
   <div className="typing-indicator">
     <div className="typing-dot"></div>
@@ -168,6 +144,26 @@ const TypingIndicator = () => (
   </div>
 );
 
+const getAvatarColor = (name) => {
+  const colors = ["#8f9d89", "#9f8f87", "#7d8f9c", "#a08f74"];
+  if (!name) return colors[0];
+  const charCode = name.charCodeAt(0) + name.charCodeAt(name.length - 1);
+  return colors[charCode % colors.length];
+};
+
+const getInitials = (firstName, lastName) => {
+  const first = firstName ? firstName.charAt(0).toUpperCase() : "";
+  const last = lastName ? lastName.charAt(0).toUpperCase() : "";
+  return `${first}${last}`;
+};
+
+const QUICK_ACTIONS = [
+  "Find universities in the UK for data science",
+  "Compare scholarship options for postgraduate study",
+  "Show strong engineering universities with better career outcomes",
+  "Help me build a safety and target shortlist",
+];
+
 const ChatPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -175,19 +171,9 @@ const ChatPage = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeNav, setActiveNav] = useState("new-chat");
   const [chatHistory, setChatHistory] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
-  const [hoveredItemId, setHoveredItemId] = useState(null);
-  const [openMenuId, setOpenMenuId] = useState(null);
   const messagesEndRef = useRef(null);
-  const videoRef = useRef(null);
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.playbackRate = 0.8; // Subtle slow motion
-    }
-  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -198,7 +184,6 @@ const ChatPage = () => {
   }, [messages, isLoading]);
 
   useEffect(() => {
-    // Get user data from localStorage
     const userData = localStorage.getItem("user");
     if (userData) {
       const parsedUser = JSON.parse(userData);
@@ -207,8 +192,8 @@ const ChatPage = () => {
         {
           id: 0,
           type: "bot",
-          text: `Good Morning, ${parsedUser.firstName}!`,
-          subtext: "I am ready to help you",
+          text: `Good morning, ${parsedUser.firstName}.`,
+          subtext: "Ask about fit, scholarships, rankings, fees, or shortlist refinement.",
         },
       ]);
     } else {
@@ -219,50 +204,39 @@ const ChatPage = () => {
   const queryRAGAPI = async (query) => {
     const response = await fetch(`${RAG_API_URL}/query`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: query,
-        top_k: 8,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, top_k: 8 }),
     });
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
 
-    return await response.json();
+    return response.json();
   };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
-    const userMessage = {
-      id: messages.length + 1,
-      type: "user",
-      text: inputValue,
-    };
-
+    const userMessage = { id: messages.length + 1, type: "user", text: inputValue };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInputValue("");
     setError(null);
     setIsLoading(true);
 
-    // If this is a new chat, add it to history
     if (currentChatId === null && messages.length <= 1) {
-      const newChatId = Math.max(...chatHistory.map((c) => c.id), 0) + 1;
+      const newChatId = Math.max(...chatHistory.map((chat) => chat.id), 0) + 1;
       const newChat = {
         id: newChatId,
-        title: inputValue.substring(0, 40),
+        title: inputValue.substring(0, 44),
         messages: newMessages,
         timestamp: new Date().toLocaleString(),
       };
 
       let updatedHistory = [newChat, ...chatHistory];
-      if (updatedHistory.length > 10) {
-        updatedHistory = updatedHistory.slice(0, 10);
+      if (updatedHistory.length > 8) {
+        updatedHistory = updatedHistory.slice(0, 8);
       }
       setChatHistory(updatedHistory);
       setCurrentChatId(newChatId);
@@ -270,38 +244,32 @@ const ChatPage = () => {
 
     try {
       const response = await queryRAGAPI(inputValue);
-
       const botMessage = {
         id: messages.length + 2,
         type: "bot",
         text: response.answer,
         sources: response.sources,
         confidence: response.confidence,
-        tavilyUsed: response.tavily_used,
       };
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
-      console.error("API Error:", err);
-      setError(
-        "Failed to get response. Please check if the API server is running."
-      );
-
-      const errorMessage = {
-        id: messages.length + 2,
-        type: "bot",
-        text: "Sorry, I encountered an error while processing your request. Please make sure the API server is running and try again.",
-        isError: true,
-      };
-
-      setMessages((prev) => [...prev, errorMessage]);
+      setError("Unable to complete that request right now. Please confirm the API server is available and try again.");
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: messages.length + 2,
+          type: "bot",
+          text: "I could not retrieve an answer for that request. Please try again in a moment.",
+          isError: true,
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleNewChat = () => {
-    setActiveNav("new-chat");
     setCurrentChatId(null);
     setError(null);
     if (user) {
@@ -309,29 +277,19 @@ const ChatPage = () => {
         {
           id: 0,
           type: "bot",
-          text: `Good Morning, ${user.firstName}!`,
-          subtext: "I am ready to help you",
+          text: `Good morning, ${user.firstName}.`,
+          subtext: "Ask about fit, scholarships, rankings, fees, or shortlist refinement.",
         },
       ]);
     }
   };
 
   const handleLoadChat = (chatId) => {
-    const chat = chatHistory.find((c) => c.id === chatId);
+    const chat = chatHistory.find((item) => item.id === chatId);
     if (chat) {
       setCurrentChatId(chatId);
       setMessages(chat.messages);
-      setOpenMenuId(null);
       setError(null);
-    }
-  };
-
-  const handleDeleteChat = (chatId, e) => {
-    e.stopPropagation();
-    setChatHistory(chatHistory.filter((c) => c.id !== chatId));
-    setOpenMenuId(null);
-    if (currentChatId === chatId) {
-      handleNewChat();
     }
   };
 
@@ -341,299 +299,134 @@ const ChatPage = () => {
     navigate("/");
   };
 
-  const handleQuickAction = (prompt) => {
-    setInputValue(prompt);
-  };
-
-  const getInitials = (firstName, lastName) => {
-    const first = firstName ? firstName.charAt(0).toUpperCase() : "";
-    const last = lastName ? lastName.charAt(0).toUpperCase() : "";
-    return first + last;
-  };
-
-  const getAvatarColor = (name) => {
-    const colors = [
-      "#10a37f",
-      "#7c3aed",
-      "#2563eb",
-      "#dc2626",
-      "#ea580c",
-      "#ca8a04",
-    ];
-    const charCode = name.charCodeAt(0) + name.charCodeAt(name.length - 1);
-    return colors[charCode % colors.length];
-  };
-
   return (
-    <div className="chat-container">
-      {/* Background Video */}
-      <video
-        ref={videoRef}
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="background-video"
-      >
-        <source src={bgVideo} type="video/mp4" />
-      </video>
-      {/* Sidebar */}
-      <div className="chat-sidebar">
-        <div className="sidebar-content">
-          <div className="sidebar-nav">
-            <div
-              className={`nav-item ${activeNav === "new-chat" ? "active" : ""}`}
-              onClick={handleNewChat}
-            >
-              <span className="nav-icon">💬</span>
-              <span className="nav-text">New Chat</span>
+    <div className="chat-page">
+      <div className="chat-backdrop"></div>
+      <WorkspaceNavbar active="chat" onLogout={handleLogout} />
+
+      <div className="chat-shell">
+        <section className="chat-hero">
+          <span className="chat-hero-kicker">Advisor workspace</span>
+          <h1>Academic direction, clarified through conversation.</h1>
+          <p>Use this space to refine fit, compare options, and move from broad exploration to a smarter shortlist.</p>
+        </section>
+
+        <section className="chat-stage">
+          <div className="chat-stage-header">
+            <div>
+              <span className="chat-stage-kicker">Current workspace</span>
+              <h2>University advisor</h2>
             </div>
-            <div
-              className="nav-item"
-              onClick={() => navigate("/match")}
-            >
-              <span className="nav-icon">🎯</span>
-              <span className="nav-text">Find Matches</span>
-            </div>
+            <button className="chat-secondary-btn" onClick={handleNewChat}>
+              New conversation
+            </button>
           </div>
 
-          {/* Recent Section */}
-          <div className="recent-section">
-            <h4 className="recent-title">Recent</h4>
-            <div className="recent-items">
+          {chatHistory.length > 0 && (
+            <div className="chat-history-strip">
               {chatHistory.map((chat) => (
-                <div
+                <button
                   key={chat.id}
-                  className="recent-item-wrapper"
-                  onMouseEnter={() => setHoveredItemId(chat.id)}
-                  onMouseLeave={() => setHoveredItemId(null)}
+                  className={`history-chip ${currentChatId === chat.id ? "active" : ""}`}
+                  onClick={() => handleLoadChat(chat.id)}
                 >
-                  <div
-                    className="recent-item"
-                    onClick={() => handleLoadChat(chat.id)}
-                  >
-                    {chat.title}
+                  {chat.title}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="chat-window">
+            <div className="chat-messages">
+              {messages.length === 1 && (
+                <div className="welcome-section">
+                  <div className="welcome-greeting">
+                    <p className="greeting-main">{messages[0].text}</p>
+                    <p className="greeting-sub">{messages[0].subtext}</p>
                   </div>
-                  {hoveredItemId === chat.id && (
-                    <div className="item-menu-container">
-                      <button
-                        className="item-menu-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuId(
-                            openMenuId === chat.id ? null : chat.id
-                          );
-                        }}
-                      >
-                        ⋯
+
+                  <div className="quick-actions">
+                    {QUICK_ACTIONS.map((action) => (
+                      <button key={action} className="quick-action-item" onClick={() => setInputValue(action)}>
+                        <span className="quick-action-label">Suggested prompt</span>
+                        <p className="quick-action-title">{action}</p>
                       </button>
-                      {openMenuId === chat.id && (
-                        <div className="item-menu-dropdown">
-                          <button
-                            className="menu-option"
-                            onClick={(e) => handleDeleteChat(chat.id, e)}
-                          >
-                            🗑️ Delete
-                          </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {messages.map((msg, idx) => {
+                if (msg.id === 0 && messages.length === 1) return null;
+
+                return (
+                  <div key={idx} className={`message ${msg.type}`}>
+                    {msg.type === "bot" && <div className="message-avatar">UX</div>}
+                    <div className={`message-content ${msg.type} ${msg.isError ? "error" : ""}`}>
+                      <div className="message-label">{msg.type === "bot" ? "Advisor response" : "Student prompt"}</div>
+                      <FormattedMessage text={msg.text} isBot={msg.type === "bot"} />
+                      {msg.sources && msg.sources.length > 0 && <SourcesSection sources={msg.sources} />}
+                      {msg.confidence !== undefined && (
+                        <div className="confidence-indicator">
+                          <span className="confidence-label">Confidence</span>
+                          <div className="confidence-bar">
+                            <div className="confidence-fill" style={{ width: `${msg.confidence * 100}%` }} />
+                          </div>
+                          <span className="confidence-value">{Math.round(msg.confidence * 100)}%</span>
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Profile Section */}
-        <div className="sidebar-profile">
-          <div className="profile-info">
-            {user && (
-              <>
-                <div
-                  className="profile-avatar"
-                  style={{
-                    backgroundColor: getAvatarColor(user.firstName),
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: "600",
-                    fontSize: "16px",
-                    color: "white",
-                  }}
-                >
-                  {getInitials(user.firstName, user.lastName)}
-                </div>
-                <div className="profile-details">
-                  <p className="profile-name">
-                    {user.firstName} {user.lastName}
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="chat-main">
-        {/* Chat Header */}
-        <div className="chat-header">
-          <div className="chat-header-main">
-            <div className="bot-greeting-pill">
-              <img src={robotGif} alt="Robot Assistant" className="robot-icon-gif" />
-              <div className="bot-text-group">
-                <span className="bot-badge">UNIXORA_BOT_ACTIVE</span>
-                <span className="bot-status-sub">SYSTEM READY</span>
-              </div>
-            </div>
-          </div>
-          <div className="chat-header-actions">
-            <button className="home-btn" onClick={() => navigate("/")}>
-              Home
-            </button>
-            <button className="logout-btn" onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
-        </div>
-
-        {/* Chat Messages */}
-        <div className="chat-messages">
-          {messages.length === 1 && (
-            <div className="welcome-section">
-              <div className="welcome-greeting">
-                <p className="greeting-main">{messages[0].text}</p>
-                <p className="greeting-sub">{messages[0].subtext}</p>
-              </div>
-
-              <div className="quick-actions">
-                <div
-                  className="quick-action-item"
-                  onClick={() =>
-                    handleQuickAction("Find universities by location")
-                  }
-                >
-                  <p className="quick-action-title">
-                    Find universities by location
-                  </p>
-                  <span className="quick-action-time">Right now</span>
-                </div>
-                <div
-                  className="quick-action-item"
-                  onClick={() =>
-                    handleQuickAction("Compare scholarship programs")
-                  }
-                >
-                  <p className="quick-action-title">
-                    Compare scholarship programs
-                  </p>
-                  <span className="quick-action-time">2 min</span>
-                </div>
-                <div
-                  className="quick-action-item"
-                  onClick={() =>
-                    handleQuickAction("Best universities for Engineering")
-                  }
-                >
-                  <p className="quick-action-title">
-                    Best universities for Engineering
-                  </p>
-                  <span className="quick-action-time">5 min</span>
-                </div>
-                <div
-                  className="quick-action-item"
-                  onClick={() =>
-                    handleQuickAction("Top-ranked universities worldwide")
-                  }
-                >
-                  <p className="quick-action-title">
-                    Top-ranked universities in the UK
-                  </p>
-                  <span className="quick-action-time">12 min</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {messages.map((msg, idx) => {
-            if (msg.id === 0 && messages.length === 1) return null;
-            return (
-              <div key={idx} className={`message ${msg.type}`}>
-                <div
-                  className={`message-content ${msg.type} ${
-                    msg.isError ? "error" : ""
-                  }`}
-                >
-                  <FormattedMessage
-                    text={msg.text}
-                    isBot={msg.type === "bot"}
-                  />
-                  {msg.sources && msg.sources.length > 0 && (
-                    <SourcesSection sources={msg.sources} />
-                  )}
-                  {msg.confidence !== undefined && (
-                    <div className="confidence-indicator">
-                      <span className="confidence-label">Confidence:</span>
-                      <div className="confidence-bar">
-                        <div
-                          className="confidence-fill"
-                          style={{ width: `${msg.confidence * 100}%` }}
-                        />
+                    {msg.type === "user" && (
+                      <div className="message-avatar user-avatar" style={{ backgroundColor: getAvatarColor(user?.firstName) }}>
+                        {user ? getInitials(user.firstName, user.lastName) : "You"}
                       </div>
-                      <span className="confidence-value">
-                        {Math.round(msg.confidence * 100)}%
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                    )}
+                  </div>
+                );
+              })}
 
-          {isLoading && (
-            <div className="message bot">
-              <div className="message-content bot">
-                <TypingIndicator />
+              {isLoading && (
+                <div className="message bot">
+                  <div className="message-avatar">UX</div>
+                  <div className="message-content bot">
+                    <div className="message-label">Advisor response</div>
+                    <TypingIndicator />
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {error && (
+              <div className="error-banner">
+                <span>{error}</span>
+                <button className="error-dismiss" onClick={() => setError(null)}>Close</button>
+              </div>
+            )}
+
+            <div className="chat-input-section">
+              <div className="input-box">
+                <input
+                  type="text"
+                  placeholder="Ask about admission fit, scholarships, rankings, fees, or shortlist refinement..."
+                  value={inputValue}
+                  onChange={(event) => setInputValue(event.target.value)}
+                  onKeyDown={(event) => event.key === "Enter" && handleSendMessage()}
+                  className="chat-input"
+                  disabled={isLoading}
+                />
+                <button
+                  className={`send-btn ${isLoading ? "disabled" : ""}`}
+                  onClick={handleSendMessage}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "..." : "->"}
+                </button>
               </div>
             </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Error Banner */}
-        {error && (
-          <div className="error-banner">
-            <span className="error-icon">⚠️</span>
-            <span>{error}</span>
-            <button className="error-dismiss" onClick={() => setError(null)}>
-              ×
-            </button>
           </div>
-        )}
-
-        {/* Chat Input */}
-        <div className="chat-input-section">
-          <div className="input-box">
-            <input
-              type="text"
-              placeholder="Ask a question or make a request..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              className="chat-input"
-              disabled={isLoading}
-            />
-            <button
-              className={`send-btn ${isLoading ? "disabled" : ""}`}
-              onClick={handleSendMessage}
-              disabled={isLoading}
-            >
-              {isLoading ? "..." : "➤"}
-            </button>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   );

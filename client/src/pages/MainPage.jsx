@@ -21,57 +21,39 @@ const MainPage = () => {
         const handleScroll = () => {
             setScrollPosition(window.scrollY);
         };
-        window.addEventListener('scroll', handleScroll);
-        
-        // Intersection Observer for scroll animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -100px 0px'
-        };
-        
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('animate-in');
-                } else {
-                    entry.target.classList.remove('animate-in');
-                }
-            });
-        }, observerOptions);
-        
-        // Observe all animatable elements
-        const animateElements = document.querySelectorAll('.animate-on-scroll');
-        animateElements.forEach(el => observer.observe(el));
 
-        const featureBoxes = document.querySelectorAll('.feature-box');
-        featureBoxes.forEach((box) => {
-            box.addEventListener('mousemove', (e) => {
-                const rect = box.getBoundingClientRect();
-                box.style.setProperty('--x', `${e.clientX - rect.left}px`);
-                box.style.setProperty('--y', `${e.clientY - rect.top}px`);
-            });
-        });
-        
+        window.addEventListener('scroll', handleScroll);
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate-in');
+                    }
+                });
+            },
+            {
+                threshold: 0.1,
+                rootMargin: '0px 0px -100px 0px',
+            }
+        );
+
+        const animateElements = document.querySelectorAll('.animate-on-scroll');
+        animateElements.forEach((element) => observer.observe(element));
+
         return () => {
             window.removeEventListener('scroll', handleScroll);
-            animateElements.forEach(el => observer.unobserve(el));
+            animateElements.forEach((element) => observer.unobserve(element));
         };
     }, []);
 
     const scrollToSection = (ref, navName) => {
         setActiveNav(navName);
-        if (ref.current) {
-            ref.current.scrollIntoView({ behavior: 'smooth' });
-        }
-    };
-
-    const handleGetStarted = () => {
-        navigate('/signup');
+        ref.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     return (
         <div className="main-page">
-            {/* Navigation Bar */}
             <nav className={`navbar ${scrollPosition > 50 ? 'scrolled' : ''}`}>
                 <div className="navbar-container">
                     <div className="navbar-brand">Unixora</div>
@@ -86,31 +68,27 @@ const MainPage = () => {
                             className={`nav-link ${activeNav === 'about' ? 'active' : ''}`}
                             onClick={() => scrollToSection(aboutRef, 'about')}
                         >
-                            About Us
+                            Platform
                         </button>
                         <button
                             className={`nav-link ${activeNav === 'contact' ? 'active' : ''}`}
                             onClick={() => scrollToSection(footerRef, 'contact')}
                         >
-                            Contacts
+                            Contact
                         </button>
                         <button className="nav-link chat-btn" onClick={() => navigate('/chat')}>
-                            💬 {user ? 'Chat' : 'Dashboard'}
+                            {user ? 'Advisor' : 'Workspace'}
                         </button>
-                        {user ? (
-                            <button className="nav-link signup-btn" onClick={() => navigate('/chat')}>
-                                Go to App
-                            </button>
-                        ) : (
-                            <button className="nav-link signup-btn" onClick={handleGetStarted}>
-                                Sign Up
-                            </button>
-                        )}
+                        <button
+                            className="nav-link signup-btn"
+                            onClick={() => navigate(user ? '/chat' : '/signup')}
+                        >
+                            {user ? 'Open Workspace' : 'Begin Search'}
+                        </button>
                     </div>
                 </div>
             </nav>
 
-            {/* Hero Section */}
             <section
                 ref={homeRef}
                 className="hero-section"
@@ -119,75 +97,94 @@ const MainPage = () => {
                 <div className="hero-overlay"></div>
                 <div className="hero-content">
                     <div className="hero-text-container">
+                        <span className="hero-eyebrow">Academic discovery, refined</span>
                         <h1 className="hero-title">
-                            Your Gateway to <span className="highlight">Academic Excellence</span>
+                            Choose your next university with clarity, structure, and confidence.
                         </h1>
                         <p className="hero-subtitle">
-                            Discover 100+ Universities Worldwide. Explore Programs. Find Your Perfect Fit.
+                            Unixora helps students explore universities, compare programs, and narrow
+                            decisions through a calmer, more credible search experience.
                         </p>
                         <button className="cta-button" onClick={() => navigate(user ? '/chat' : '/signup')}>
-                            {user ? 'Go to Dashboard' : 'Get Started'}
+                            {user ? 'Open Advisor Workspace' : 'Begin Your Search'}
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <line x1="5" y1="12" x2="19" y2="12"></line>
                                 <polyline points="12 5 19 12 12 19"></polyline>
                             </svg>
                         </button>
                     </div>
+
+                    <div className="hero-metrics animate-on-scroll">
+                        <div className="hero-metric">
+                            <strong>100+</strong>
+                            <span>University profiles</span>
+                        </div>
+                        <div className="hero-metric">
+                            <strong>500+</strong>
+                            <span>Programs explored</span>
+                        </div>
+                        <div className="hero-metric">
+                            <strong>01</strong>
+                            <span>Guided path at a time</span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            {/* About Us Section */}
             <section ref={aboutRef} className="about-section">
                 <div className="about-container">
                     <div className="about-header animate-on-scroll">
-                        <h2 className="animate-on-scroll">About Us</h2>
+                        <span className="section-kicker">Platform overview</span>
+                        <h2 className="animate-on-scroll">A more deliberate way to explore higher education.</h2>
                         <p className="about-description animate-on-scroll">
-                            Unixora is your comprehensive platform for exploring educational opportunities across the globe. We connect students with over 100 prestigious universities, helping them find institutions that match their academic aspirations and career goals. Our mission is to simplify your university search journey and empower you to make informed decisions about your educational future. Discover programs, explore faculties, and connect with opportunities worldwide.
+                            Unixora brings together university discovery, program comparison, and guided
+                            academic search in one focused environment. Instead of overwhelming students
+                            with noise, the experience is designed to help them weigh fit, credibility,
+                            affordability, and long-term direction with more confidence.
                         </p>
                     </div>
 
                     <div className="features-container">
                         <div className="feature-box animate-on-scroll">
-                            <div className="feature-number">100+</div>
-                            <h3>Universities</h3>
-                            <p>Access detailed information about top universities worldwide with comprehensive data on programs and specializations.</p>
+                            <div className="feature-number">01</div>
+                            <h3>Advisor Workspace</h3>
+                            <p>Ask focused academic questions, review sourced answers, and refine choices through structured guidance.</p>
                         </div>
                         <div className="feature-box animate-on-scroll">
-                            <div className="feature-number">500+</div>
-                            <h3>Programs</h3>
-                            <p>Explore diverse academic programs from engineering to humanities across multiple disciplines and fields.</p>
+                            <div className="feature-number">02</div>
+                            <h3>Matcher Flow</h3>
+                            <p>Turn your preferences, budget, profile, and priorities into a shortlist that feels reasoned rather than random.</p>
                         </div>
                         <div className="feature-box animate-on-scroll">
-                            <div className="feature-number">1000+</div>
-                            <h3>Data Points</h3>
-                            <p>Access comprehensive information on programs, scholarships, faculty, research labs, and opportunities at each university.</p>
+                            <div className="feature-number">03</div>
+                            <h3>Evidence-Led Search</h3>
+                            <p>Review programs, scholarships, rankings, and context with presentation that supports trust and decision-making.</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Footer */}
             <footer className="footer" ref={footerRef}>
                 <div className="footer-content">
                     <div className="footer-section animate-on-scroll">
                         <h4>Unixora</h4>
-                        <p>Your gateway to academic excellence worldwide. Connecting students with their perfect university match across the globe. Explore 100+ institutions and discover your ideal educational path. Empowering dreams, one student at a time.</p>
+                        <p>A premium academic search platform designed to make university discovery feel clearer, calmer, and more credible.</p>
                     </div>
                     <div className="footer-section animate-on-scroll">
-                        <h4>Contact Info</h4>
+                        <h4>Focus Areas</h4>
                         <ul>
-                            <li><strong>Email:</strong> support@unixora.com</li>
-                            <li><strong>Phone:</strong> +1 (800) 123-4567</li>
-                            <li><strong>Address:</strong> 123 Education Avenue, NY 10001</li>
-                            <li><strong>Hours:</strong> Mon-Fri 9AM-6PM</li>
+                            <li>University discovery</li>
+                            <li>Program comparison</li>
+                            <li>Scholarship-aware search</li>
+                            <li>Guided shortlisting</li>
                         </ul>
                     </div>
                     <div className="footer-section animate-on-scroll">
-                        <h4>Follow Us</h4>
+                        <h4>Navigate</h4>
                         <div className="social-links">
-                            <a href="#facebook">Facebook</a>
-                            <a href="#twitter">Twitter</a>
-                            <a href="#linkedin">LinkedIn</a>
+                            <a href="#home">Home</a>
+                            <a href="#about">Platform</a>
+                            <a href="#contact">Contact</a>
                         </div>
                     </div>
                 </div>

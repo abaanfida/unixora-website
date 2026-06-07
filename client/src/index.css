@@ -1,1 +1,64 @@
-/* index.css */
+html {
+    scroll-behavior: smooth;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    background:
+        radial-gradient(circle at top center, rgba(143, 157, 137, 0.08), transparent 24%),
+        linear-gradient(180deg, #060606 0%, #0a0a0a 100%);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button {
+    border: none;
+    cursor: pointer;
+}
+
+input,
+select,
+textarea {
+    outline: none;
+}
+
+input::-ms-reveal,
+input::-ms-clear {
+    display: none;
+}
+
+input::-webkit-password-reveal-button {
+    display: none;
+    -webkit-appearance: none;
+}
+
+::selection {
+    background: rgba(143, 157, 137, 0.26);
+    color: var(--text-primary);
+}

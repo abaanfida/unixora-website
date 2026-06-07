@@ -1,24 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import WorkspaceNavbar from "../components/WorkspaceNavbar";
 import "../styles/MatcherPage.css";
 
 const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://127.0.0.1:8000";
 
-const ImportanceSelector = ({ label, value, onChange, icon }) => (
-  <div className="form-group">
-    <label className="form-label">
-      <span className="label-icon">{icon}</span>
-      {label}
-    </label>
+const ImportanceSelector = ({ label, value, onChange, description }) => (
+  <div className="form-group importance-card">
+    <div className="importance-copy">
+      <label className="form-label">{label}</label>
+      <p>{description}</p>
+    </div>
     <div className="importance-buttons">
-      {["not_important", "somewhat_important", "very_important"].map((v) => (
+      {["not_important", "somewhat_important", "very_important"].map((option) => (
         <button
-          key={v}
+          key={option}
           type="button"
-          className={`importance-btn ${value === v ? "active" : ""}`}
-          onClick={() => onChange(v)}
+          className={`importance-btn ${value === option ? "active" : ""}`}
+          onClick={() => onChange(option)}
         >
-          {v === "not_important" ? "Doesn't Matter" : v === "somewhat_important" ? "Somewhat" : "Very"}
+          {option === "not_important" ? "Low" : option === "somewhat_important" ? "Medium" : "High"}
         </button>
       ))}
     </div>
@@ -26,10 +27,10 @@ const ImportanceSelector = ({ label, value, onChange, icon }) => (
 );
 
 const CATEGORY_META = {
-  safety:  { label: "Safety",  color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: "✅" },
-  target:  { label: "Target",  color: "#60a5fa", bg: "rgba(96,165,250,0.1)",  icon: "🎯" },
-  reach:   { label: "Reach",   color: "#f97316", bg: "rgba(249,115,22,0.1)",  icon: "🔥" },
-  unknown: { label: "Assess",  color: "#a0a0a0", bg: "rgba(160,160,160,0.1)", icon: "❓" },
+  safety: { label: "Safety", color: "#9eb69a", bg: "rgba(143, 157, 137, 0.16)" },
+  target: { label: "Target", color: "#d4cab1", bg: "rgba(212, 202, 177, 0.12)" },
+  reach: { label: "Reach", color: "#b89583", bg: "rgba(184, 149, 131, 0.14)" },
+  unknown: { label: "Review", color: "#9b968a", bg: "rgba(155, 150, 138, 0.12)" },
 };
 
 const ProgramCard = ({ prog }) => (
@@ -37,26 +38,29 @@ const ProgramCard = ({ prog }) => (
     <div className="program-name">{prog.name}</div>
     <div className="program-meta">
       {prog.degree_type && <span className="prog-tag">{prog.degree_type}</span>}
-      {prog.duration    && <span className="prog-tag">⏱ {prog.duration}</span>}
-      {prog.mode        && <span className="prog-tag">📖 {prog.mode}</span>}
-      {prog.fees_overseas && <span className="prog-tag prog-fees">£{prog.fees_overseas.toLocaleString()}/yr</span>}
+      {prog.duration && <span className="prog-tag">{prog.duration}</span>}
+      {prog.mode && <span className="prog-tag">{prog.mode}</span>}
+      {prog.fees_overseas && <span className="prog-tag prog-fees">GBP {prog.fees_overseas.toLocaleString()} / year</span>}
     </div>
     {prog.specializations?.length > 0 && (
       <div className="prog-specs">
-        {prog.specializations.map((s, i) => <span key={i} className="spec-chip">{s}</span>)}
+        {prog.specializations.map((specialization, index) => (
+          <span key={index} className="spec-chip">{specialization}</span>
+        ))}
       </div>
     )}
     {prog.career_prospects?.length > 0 && (
       <div className="prog-careers">
-        <span className="careers-label">Careers: </span>
-        {prog.career_prospects.join(", ")}
+        <span className="careers-label">Career outcomes</span>
+        <p>{prog.career_prospects.join(", ")}</p>
       </div>
     )}
   </div>
 );
 
 const UniversityCard = ({ match, isExpanded, onToggle }) => {
-  const cat = CATEGORY_META[match.admission_category || "unknown"];
+  const category = CATEGORY_META[match.admission_category || "unknown"];
+
   return (
     <div className={`university-card ${isExpanded ? "expanded" : ""}`}>
       <div className="card-header" onClick={onToggle}>
@@ -65,23 +69,21 @@ const UniversityCard = ({ match, isExpanded, onToggle }) => {
           <h3 className="card-title">{match.name}</h3>
           <div className="card-subtitle">
             {match.location?.city && <span>{match.location.city}</span>}
-            {match.location?.region && <span> • {match.location.region}</span>}
-            {match.university_ranking?.uk_rank && (
-              <span className="uk-rank">UK #{match.university_ranking.uk_rank}</span>
-            )}
+            {match.location?.region && <span>{match.location.region}</span>}
+            {match.university_ranking?.uk_rank && <span>UK Rank {match.university_ranking.uk_rank}</span>}
           </div>
         </div>
         <div className="card-badges">
-          <span className="admission-badge" style={{ color: cat.color, background: cat.bg }}>
-            {cat.icon} {cat.label}
+          <span className="admission-badge" style={{ color: category.color, background: category.bg }}>
+            {category.label}
           </span>
-          {match.web_data_used && <span className="web-badge">🌐 Web</span>}
+          {match.web_data_used && <span className="web-badge">Web-enriched</span>}
         </div>
         <div className="card-score">
           <span className="score-value">{match.total_score}</span>
-          <span className="score-label">Match</span>
+          <span className="score-label">Match score</span>
         </div>
-        <div className="card-expand-icon">{isExpanded ? "▼" : "▶"}</div>
+        <div className="card-expand-icon">{isExpanded ? "Hide" : "View"}</div>
       </div>
 
       {isExpanded && (
@@ -90,27 +92,25 @@ const UniversityCard = ({ match, isExpanded, onToggle }) => {
             <p>{match.justification}</p>
             {match.website && (
               <a href={match.website} target="_blank" rel="noopener noreferrer" className="visit-btn">
-                🔗 Visit Website
+                Visit university site
               </a>
             )}
           </div>
 
-          {/* Matching Programs */}
           {match.matching_programs?.length > 0 && (
             <div className="detail-section">
-              <h4>🎓 Matching Programs</h4>
+              <h4>Matching programs</h4>
               <div className="programs-grid">
-                {match.matching_programs.map((prog, i) => (
-                  <ProgramCard key={i} prog={prog} />
+                {match.matching_programs.map((prog, index) => (
+                  <ProgramCard key={index} prog={prog} />
                 ))}
               </div>
             </div>
           )}
 
           <div className="card-sections">
-            {/* Score Breakdown */}
             <div className="card-section">
-              <h4>📊 Score Breakdown</h4>
+              <h4>Score breakdown</h4>
               <div className="score-breakdown">
                 {Object.entries(match.score_breakdown || {}).map(([key, value]) => (
                   <div key={key} className="score-item">
@@ -124,54 +124,49 @@ const UniversityCard = ({ match, isExpanded, onToggle }) => {
               </div>
             </div>
 
-            {/* Admission Requirements */}
             {match.admission_requirements?.length > 0 && (
               <div className="card-section">
-                <h4>📋 Admission Requirements</h4>
+                <h4>Admission requirements</h4>
                 <ul>
-                  {match.admission_requirements.map((r, i) => <li key={i}>{r}</li>)}
+                  {match.admission_requirements.map((requirement, index) => <li key={index}>{requirement}</li>)}
                 </ul>
               </div>
             )}
 
-            {/* Scholarships */}
             {match.scholarships?.length > 0 && (
               <div className="card-section">
-                <h4>💰 Scholarships</h4>
+                <h4>Scholarships</h4>
                 <ul className="scholarships-list">
-                  {match.scholarships.map((sch, i) => (
-                    <li key={i}>
-                      <strong>{sch.name}</strong>
-                      {sch.amount && <span> — {sch.amount}</span>}
+                  {match.scholarships.map((scholarship, index) => (
+                    <li key={index}>
+                      <strong>{scholarship.name}</strong>
+                      {scholarship.amount && <span>{scholarship.amount}</span>}
                     </li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {/* Research */}
             {match.research_highlights?.length > 0 && (
               <div className="card-section">
-                <h4>🔬 Research</h4>
-                <ul>{match.research_highlights.map((r, i) => <li key={i}>{r}</li>)}</ul>
+                <h4>Research</h4>
+                <ul>{match.research_highlights.map((item, index) => <li key={index}>{item}</li>)}</ul>
               </div>
             )}
 
-            {/* Faculty */}
             {match.faculty_highlights?.length > 0 && (
               <div className="card-section">
-                <h4>👨‍🏫 Faculty</h4>
-                <ul>{match.faculty_highlights.map((f, i) => <li key={i}>{f}</li>)}</ul>
+                <h4>Faculty</h4>
+                <ul>{match.faculty_highlights.map((item, index) => <li key={index}>{item}</li>)}</ul>
               </div>
             )}
 
-            {/* Student Life */}
             {match.student_life_highlights?.length > 0 && (
               <div className="card-section">
-                <h4>🎉 Student Life</h4>
+                <h4>Student life</h4>
                 <div className="sl-tags">
-                  {match.student_life_highlights.map((s, i) => (
-                    <span key={i} className="sl-tag">{s}</span>
+                  {match.student_life_highlights.map((item, index) => (
+                    <span key={index} className="sl-tag">{item}</span>
                   ))}
                 </div>
               </div>
@@ -183,20 +178,6 @@ const UniversityCard = ({ match, isExpanded, onToggle }) => {
   );
 };
 
-const getAvatarColor = (name) => {
-  if (!name) return "#10a37f";
-  const colors = [
-    "#10a37f",
-    "#7c3aed",
-    "#2563eb",
-    "#dc2626",
-    "#ea580c",
-    "#ca8a04",
-  ];
-  const charCode = name.charCodeAt(0) + (name.length > 1 ? name.charCodeAt(name.length - 1) : 0);
-  return colors[charCode % colors.length];
-};
-
 const MatcherPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -205,7 +186,7 @@ const MatcherPage = () => {
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const [expandedCard, setExpandedCard] = useState(null);
-  const [step, setStep] = useState(0); // multi-step form
+  const [step, setStep] = useState(0);
 
   const [formData, setFormData] = useState({
     field_of_study: "",
@@ -229,32 +210,28 @@ const MatcherPage = () => {
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
-    if (userData) setUser(JSON.parse(userData));
-    else navigate("/login");
+    if (userData) {
+      setUser(JSON.parse(userData));
+    } else {
+      navigate("/login");
+    }
   }, [navigate]);
 
-  const handleInputChange = (field, value) =>
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleInputChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
 
-  const handleSubmit = async (e) => {
-    console.log("Submit initiated...");
-    if (e && e.preventDefault) e.preventDefault();
-    
-    if (!formData.field_of_study) {
-      console.warn("Submit aborted: field_of_study is empty");
-      return;
-    }
+  const handleSubmit = async (event) => {
+    if (event?.preventDefault) event.preventDefault();
+    if (!formData.field_of_study) return;
 
     setIsLoading(true);
     setError(null);
     setResults(null);
 
     try {
-      console.log("Constructing payload with:", formData);
       const payload = {
         field_of_study: formData.field_of_study,
         degree_level: formData.degree_level,
-        interests: (formData.interests || "").split(",").map((s) => s.trim()).filter(Boolean),
+        interests: (formData.interests || "").split(",").map((item) => item.trim()).filter(Boolean),
         current_grades: formData.current_grades || null,
         ielts_score: formData.ielts_score ? parseFloat(formData.ielts_score) : null,
         career_goals: formData.career_goals || null,
@@ -263,7 +240,7 @@ const MatcherPage = () => {
         location_preference: formData.location_preference,
         preferred_locations:
           formData.location_preference === "specific"
-            ? (formData.preferred_locations || "").split(",").map((s) => s.trim()).filter(Boolean)
+            ? (formData.preferred_locations || "").split(",").map((item) => item.trim()).filter(Boolean)
             : [],
         fee_preference: formData.fee_preference,
         max_fees:
@@ -277,21 +254,17 @@ const MatcherPage = () => {
         student_life_importance: formData.student_life_importance,
       };
 
-      console.log("Sending request to:", `${RAG_API_URL}/match`);
       const response = await fetch(`${RAG_API_URL}/match`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      console.log("Response status:", response.status);
       if (!response.ok) throw new Error(`API error: ${response.status}`);
       const data = await response.json();
-      console.log("Match data received:", data);
       setResults(data);
       setExpandedCard(data.matches?.[0]?.rank || null);
     } catch (err) {
-      console.error("Match API Error:", err);
       setError(`Failed to find matches: ${err.message}`);
     } finally {
       setIsLoading(false);
@@ -300,14 +273,14 @@ const MatcherPage = () => {
 
   const handleExport = async () => {
     if (!results || !results.matches) return;
-    
+
     setIsExporting(true);
     try {
       const payload = {
         profile: {
           field_of_study: formData.field_of_study,
           degree_level: formData.degree_level,
-          interests: (formData.interests || "").split(",").map((s) => s.trim()).filter(Boolean),
+          interests: (formData.interests || "").split(",").map((item) => item.trim()).filter(Boolean),
           current_grades: formData.current_grades || null,
           ielts_score: formData.ielts_score ? parseFloat(formData.ielts_score) : null,
           career_goals: formData.career_goals || null,
@@ -316,7 +289,7 @@ const MatcherPage = () => {
           location_preference: formData.location_preference,
           preferred_locations:
             formData.location_preference === "specific"
-              ? (formData.preferred_locations || "").split(",").map((s) => s.trim()).filter(Boolean)
+              ? (formData.preferred_locations || "").split(",").map((item) => item.trim()).filter(Boolean)
               : [],
           fee_preference: formData.fee_preference,
           max_fees:
@@ -329,7 +302,7 @@ const MatcherPage = () => {
           faculty_importance: formData.faculty_importance,
           student_life_importance: formData.student_life_importance,
         },
-        matches: results
+        matches: results,
       };
 
       const response = await fetch(`${RAG_API_URL}/export-matches`, {
@@ -342,21 +315,19 @@ const MatcherPage = () => {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `University_Comparison_Report_${formData.field_of_study.replace(/\s+/g, "_")}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `University_Comparison_Report_${formData.field_of_study.replace(/\s+/g, "_")}.xlsx`;
+      document.body.appendChild(anchor);
+      anchor.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      document.body.removeChild(anchor);
     } catch (err) {
-      console.error("Export Error:", err);
       alert("Failed to generate Excel report. Please try again.");
     } finally {
       setIsExporting(false);
     }
   };
-
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -364,112 +335,78 @@ const MatcherPage = () => {
     navigate("/");
   };
 
-  const steps = ["Study", "Background", "Preferences", "Priorities"];
+  const steps = ["Study", "Profile", "Preferences", "Priorities"];
 
   return (
-    <div className="matcher-container">
-      {/* Sidebar */}
-      <div className="matcher-sidebar">
-        <div className="sidebar-brand">
-          <span className="brand-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="3 9 21 9"></polyline><path d="M9 21V9"></path></svg>
-          </span>
-          <span className="brand-text">UNIMATCHER STUDIO</span>
-        </div>
-        <nav className="sidebar-nav">
-          <div className="nav-item" onClick={() => navigate("/chat")}>
-            <span className="nav-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-            </span>
-            <span>Chat Assistant</span>
-          </div>
-          <div className="nav-item active">
-            <span className="nav-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
-            </span>
-            <span>Find Matches</span>
-          </div>
-        </nav>
-        <div className="sidebar-footer">
-          {user && (
-            <div className="user-info">
-              <div
-                className="user-avatar"
-                style={{
-                  backgroundColor: getAvatarColor(user.firstName),
-                }}
-              >
-                {user.firstName?.charAt(0)}
-                {user.lastName?.charAt(0)}
+    <div className="matcher-page">
+      <div className="matcher-backdrop"></div>
+      <WorkspaceNavbar active="match" onLogout={handleLogout} />
+
+      <div className="matcher-shell">
+        <section className="matcher-hero">
+          <span className="matcher-hero-kicker">Advisor flow</span>
+          <h1>Build a shortlist that feels reasoned, not random.</h1>
+          <p>Share what you want to study, how selective you can be, and which tradeoffs matter most. Unixora will turn that into a more structured university shortlist.</p>
+        </section>
+
+        {!results ? (
+          <section className="matcher-stage">
+            <div className="matcher-stage-intro">
+              <div className="intro-card">
+                <span className="intro-kicker">How this works</span>
+                <p>Start broad, then narrow. This flow translates your academic direction, profile, and constraints into a shortlist you can actually compare.</p>
               </div>
-              <div className="user-details">
-                <span className="user-name">{user.firstName} {user.lastName}</span>
-                <span className="profile-badge">PREMIUM STUDENT</span>
+              <div className="intro-card">
+                <span className="intro-kicker">Outcome</span>
+                <p>Expect safety, target, and reach interpretation plus program and scholarship context for each recommendation.</p>
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="matcher-main">
-        <div className="matcher-header">
-          <div>
-            <h1 className="header-title">Find Your Perfect <span className="highlight-italic">University</span></h1>
-            <p className="header-subtitle">DEFINE YOUR ACADEMIC FUTURE</p>
-          </div>
-          <div className="header-buttons">
-            <button className="home-btn" onClick={() => navigate("/")}>Home</button>
-            <button className="logout-btn" onClick={handleLogout}>Logout</button>
-          </div>
-        </div>
-
-        <div className="matcher-content">
-          {!results ? (
-            <form className="matcher-form" onSubmit={(e) => e.preventDefault()}>
-              {/* Step Progress */}
+            <form className="matcher-form" onSubmit={handleSubmit}>
               {!isLoading && (
                 <div className="step-progress">
-                  {steps.map((s, i) => (
-                    <div
-                      key={i}
-                      className={`step-item ${i === step ? "active" : ""} ${i < step ? "done" : ""}`}
-                      onClick={() => setStep(i)}
+                  {steps.map((stepName, index) => (
+                    <button
+                      key={stepName}
+                      type="button"
+                      className={`step-item ${index === step ? "active" : ""} ${index < step ? "done" : ""}`}
+                      onClick={() => setStep(index)}
                     >
-                      <div className="step-dot">{i < step ? "✓" : i + 1}</div>
-                      <span>{s}</span>
-                    </div>
+                      <div className="step-dot">{index < step ? "OK" : index + 1}</div>
+                      <span>{stepName}</span>
+                    </button>
                   ))}
                 </div>
               )}
 
-              {/* Step 0: Study */}
               {step === 0 && (
                 <div className="form-section">
-                  <h2 className="section-title">📚 What do you want to study?</h2>
+                  <h2 className="section-title">What do you want to study?</h2>
+                  <p className="section-hint">Define the academic direction first, then shape the shortlist around fit and constraints.</p>
+
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Field of Study *</label>
+                      <label className="form-label">Field of study</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="e.g., Computer Science, Finance, Engineering"
+                        placeholder="Computer Science, Finance, Engineering"
                         value={formData.field_of_study}
-                        onChange={(e) => handleInputChange("field_of_study", e.target.value)}
+                        onChange={(event) => handleInputChange("field_of_study", event.target.value)}
                         required
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Degree Level *</label>
+                      <label className="form-label">Degree level</label>
                       <div className="degree-buttons">
-                        {["UG", "PG"].map((lvl) => (
+                        {["UG", "PG"].map((level) => (
                           <button
-                            key={lvl}
+                            key={level}
                             type="button"
-                            className={`degree-btn ${formData.degree_level === lvl ? "active" : ""}`}
-                            onClick={() => handleInputChange("degree_level", lvl)}
+                            className={`degree-btn ${formData.degree_level === level ? "active" : ""}`}
+                            onClick={() => handleInputChange("degree_level", level)}
                           >
-                            {lvl === "UG" ? "Undergraduate" : "Postgraduate"}
+                            {level === "UG" ? "Undergraduate" : "Postgraduate"}
                           </button>
                         ))}
                       </div>
@@ -477,172 +414,202 @@ const MatcherPage = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Specific Interests</label>
+                    <label className="form-label">Specific interests</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="e.g., AI, Machine Learning, Data Science (comma separated)"
+                      placeholder="AI, machine learning, data science"
                       value={formData.interests}
-                      onChange={(e) => handleInputChange("interests", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">🎯 Career Goals</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g., Software Engineer at tech company, Academic Researcher"
-                      value={formData.career_goals}
-                      onChange={(e) => handleInputChange("career_goals", e.target.value)}
+                      onChange={(event) => handleInputChange("interests", event.target.value)}
                     />
                   </div>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">📖 Study Mode</label>
+                      <label className="form-label">Career goals</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Software engineer, quantitative analyst, researcher"
+                        value={formData.career_goals}
+                        onChange={(event) => handleInputChange("career_goals", event.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Study mode</label>
                       <select
                         className="form-input form-select"
                         value={formData.preferred_mode}
-                        onChange={(e) => handleInputChange("preferred_mode", e.target.value)}
+                        onChange={(event) => handleInputChange("preferred_mode", event.target.value)}
                       >
-                        <option value="any">Any Mode</option>
+                        <option value="any">Any mode</option>
                         <option value="full_time">Full-time</option>
                         <option value="part_time">Part-time</option>
                         <option value="online">Online</option>
                       </select>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">⏱ Max Duration (years)</label>
-                      <input
-                        type="number"
-                        className="form-input"
-                        placeholder="e.g., 1, 2, 3"
-                        min="1" max="6"
-                        value={formData.max_duration_years}
-                        onChange={(e) => handleInputChange("max_duration_years", e.target.value)}
-                      />
-                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Maximum duration (years)</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      placeholder="1, 2, 3"
+                      min="1"
+                      max="6"
+                      value={formData.max_duration_years}
+                      onChange={(event) => handleInputChange("max_duration_years", event.target.value)}
+                    />
                   </div>
                 </div>
               )}
 
-              {/* Step 1: Academic Background */}
               {step === 1 && (
                 <div className="form-section">
-                  <h2 className="section-title">🎓 Academic Background</h2>
-                  <p className="section-hint">This helps us assess your admission chances (Safety / Target / Reach).</p>
+                  <h2 className="section-title">Tell us about your academic profile</h2>
+                  <p className="section-hint">This helps interpret whether a recommendation is more likely to be safety, target, or reach.</p>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">📝 Current Grades</label>
+                      <label className="form-label">Current grades</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="e.g., First Class Honours, 3.8 GPA, AAB A-Levels"
+                        placeholder="First Class Honours, 3.8 GPA, AAB A-Levels"
                         value={formData.current_grades}
-                        onChange={(e) => handleInputChange("current_grades", e.target.value)}
+                        onChange={(event) => handleInputChange("current_grades", event.target.value)}
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">🌍 IELTS Score (0–9)</label>
+                      <label className="form-label">IELTS score</label>
                       <input
                         type="number"
                         className="form-input"
-                        placeholder="e.g., 6.5, 7.0, 8.0"
-                        min="0" max="9" step="0.5"
+                        placeholder="6.5, 7.0, 8.0"
+                        min="0"
+                        max="9"
+                        step="0.5"
                         value={formData.ielts_score}
-                        onChange={(e) => handleInputChange("ielts_score", e.target.value)}
+                        onChange={(event) => handleInputChange("ielts_score", event.target.value)}
                       />
                     </div>
                   </div>
 
-                  <div className="ielts-hint">
-                    <div className="hint-row"><span className="hint-badge safety">✅ Safety</span> Your profile comfortably meets requirements</div>
-                    <div className="hint-row"><span className="hint-badge target">🎯 Target</span> Your profile meets or narrowly meets requirements</div>
-                    <div className="hint-row"><span className="hint-badge reach">🔥 Reach</span> Your profile is below the typical requirements</div>
+                  <div className="advisor-hint-card">
+                    <div className="hint-row"><strong>Safety</strong><span>Your profile comfortably meets the likely entry range.</span></div>
+                    <div className="hint-row"><strong>Target</strong><span>Your profile is competitive and reasonably aligned.</span></div>
+                    <div className="hint-row"><strong>Reach</strong><span>The fit is more ambitious and may require stronger evidence.</span></div>
                   </div>
                 </div>
               )}
 
-              {/* Step 2: Preferences */}
               {step === 2 && (
                 <div className="form-section">
-                  <h2 className="section-title">⚙️ Preferences</h2>
+                  <h2 className="section-title">Set your practical preferences</h2>
 
-                  <h3 className="subsection-title">📍 Location</h3>
-                  <div className="preference-selector">
-                    {[["not_important", "Doesn't Matter"], ["specific", "I have preferences"]].map(([v, label]) => (
-                      <button
-                        key={v}
-                        type="button"
-                        className={`pref-btn ${formData.location_preference === v ? "active" : ""}`}
-                        onClick={() => handleInputChange("location_preference", v)}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                  <div className="form-group">
+                    <label className="form-label">Location preference</label>
+                    <div className="preference-selector">
+                      {[["not_important", "Open to anywhere"], ["specific", "I have preferred regions"]].map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={`pref-btn ${formData.location_preference === value ? "active" : ""}`}
+                          onClick={() => handleInputChange("location_preference", value)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
                   {formData.location_preference === "specific" && (
-                    <div className="form-group" style={{ marginTop: "16px" }}>
+                    <div className="form-group">
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="e.g., London, Scotland, Manchester (comma separated)"
+                        placeholder="London, Scotland, Manchester"
                         value={formData.preferred_locations}
-                        onChange={(e) => handleInputChange("preferred_locations", e.target.value)}
+                        onChange={(event) => handleInputChange("preferred_locations", event.target.value)}
                       />
                     </div>
                   )}
 
-                  <h3 className="subsection-title" style={{ marginTop: "24px" }}>💷 Budget</h3>
-                  <div className="preference-selector">
-                    {[["not_important", "Doesn't Matter"], ["max_limit", "Set Maximum"]].map(([v, label]) => (
-                      <button
-                        key={v}
-                        type="button"
-                        className={`pref-btn ${formData.fee_preference === v ? "active" : ""}`}
-                        onClick={() => handleInputChange("fee_preference", v)}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                  <div className="form-group">
+                    <label className="form-label">Tuition preference</label>
+                    <div className="preference-selector">
+                      {[["not_important", "Flexible"], ["max_limit", "Set a ceiling"]].map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={`pref-btn ${formData.fee_preference === value ? "active" : ""}`}
+                          onClick={() => handleInputChange("fee_preference", value)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
                   {formData.fee_preference !== "not_important" && (
-                    <div className="form-group fee-input-group" style={{ marginTop: "16px" }}>
-                      <span className="currency-symbol">£</span>
+                    <div className="form-group fee-input-group">
+                      <span className="currency-symbol">GBP</span>
                       <input
                         type="number"
                         className="form-input fee-input"
                         placeholder="Maximum annual fee"
                         value={formData.max_fees}
-                        onChange={(e) => handleInputChange("max_fees", e.target.value)}
+                        onChange={(event) => handleInputChange("max_fees", event.target.value)}
                       />
-                      <span className="fee-suffix">/year</span>
+                      <span className="fee-suffix">per year</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Step 3: Priorities */}
               {step === 3 && (
                 <div className="form-section">
-                  <h2 className="section-title">⚖️ What's Important to You?</h2>
+                  <h2 className="section-title">What should the shortlist optimize for?</h2>
                   <div className="importance-grid">
-                    <ImportanceSelector label="University Ranking" icon="🏆" value={formData.ranking_importance} onChange={(v) => handleInputChange("ranking_importance", v)} />
-                    <ImportanceSelector label="Scholarships"       icon="💰" value={formData.scholarship_importance} onChange={(v) => handleInputChange("scholarship_importance", v)} />
-                    <ImportanceSelector label="Research Facilities" icon="🔬" value={formData.research_importance} onChange={(v) => handleInputChange("research_importance", v)} />
-                    <ImportanceSelector label="Faculty Expertise"  icon="👨‍🏫" value={formData.faculty_importance} onChange={(v) => handleInputChange("faculty_importance", v)} />
-                    <ImportanceSelector label="Student Life"       icon="🎉" value={formData.student_life_importance} onChange={(v) => handleInputChange("student_life_importance", v)} />
+                    <ImportanceSelector
+                      label="University ranking"
+                      description="Use this if brand recognition and published league tables matter strongly."
+                      value={formData.ranking_importance}
+                      onChange={(value) => handleInputChange("ranking_importance", value)}
+                    />
+                    <ImportanceSelector
+                      label="Scholarships"
+                      description="Increase this when funding flexibility is critical to your decision."
+                      value={formData.scholarship_importance}
+                      onChange={(value) => handleInputChange("scholarship_importance", value)}
+                    />
+                    <ImportanceSelector
+                      label="Research strength"
+                      description="Useful if you care about labs, publications, or academic depth."
+                      value={formData.research_importance}
+                      onChange={(value) => handleInputChange("research_importance", value)}
+                    />
+                    <ImportanceSelector
+                      label="Faculty expertise"
+                      description="Prioritize this when teaching reputation and specialist staff matter."
+                      value={formData.faculty_importance}
+                      onChange={(value) => handleInputChange("faculty_importance", value)}
+                    />
+                    <ImportanceSelector
+                      label="Student life"
+                      description="Raise this when environment and day-to-day experience shape your fit."
+                      value={formData.student_life_importance}
+                      onChange={(value) => handleInputChange("student_life_importance", value)}
+                    />
                   </div>
                 </div>
               )}
 
-              {/* Navigation */}
               <div className="form-nav">
                 {step > 0 && (
                   <button type="button" className="nav-back-btn" onClick={() => setStep(step - 1)}>
-                    ← Back
+                    Back
                   </button>
                 )}
                 {step < steps.length - 1 ? (
@@ -652,77 +619,59 @@ const MatcherPage = () => {
                     onClick={() => setStep(step + 1)}
                     disabled={step === 0 && !formData.field_of_study}
                   >
-                    Next →
+                    Continue
                   </button>
                 ) : (
                   <button
-                    type="button"
-                    key="submit-btn"
+                    type="submit"
                     className={`submit-btn ${isLoading ? "loading" : ""}`}
                     disabled={isLoading || !formData.field_of_study}
-                    onClick={handleSubmit}
                   >
-                    {isLoading ? (
-                      <><span className="spinner" />Finding matches...</>
-                    ) : (
-                      <><span>🎯</span> Find My Matches</>
-                    )}
+                    {isLoading ? "Building shortlist..." : "Generate shortlist"}
                   </button>
                 )}
               </div>
 
-              {error && (
-                <div className="error-message">
-                  <span>⚠️</span>{error}
-                </div>
-              )}
+              {error && <div className="error-message">{error}</div>}
             </form>
-          ) : (
-            <div className="results-container">
-              <div className="results-header">
-                <button className="back-btn" onClick={() => { setResults(null); setStep(0); }}>
-                  ← New Search
+          </section>
+        ) : (
+          <section className="results-stage">
+            <div className="results-header">
+              <button className="back-btn" onClick={() => { setResults(null); setStep(0); }}>
+                Start another search
+              </button>
+              <div className="results-actions">
+                <button className="export-btn" onClick={handleExport} disabled={isExporting}>
+                  {isExporting ? "Generating report..." : "Export comparison report"}
                 </button>
-                <div className="results-actions">
-                  <button 
-                    className="export-btn" 
-                    onClick={handleExport}
-                    disabled={isExporting}
-                  >
-                    {isExporting ? (
-                      <><span className="spinner" /> Generating...</>
-                    ) : (
-                      <><span>📊</span> Export to Excel</>
-                    )}
-                  </button>
-                  <div className="results-stats">
-                    <span>{results.total_evaluated} universities analyzed</span>
-                    <span className="divider">•</span>
-                    <span>{results.matches?.length || 0} matches found</span>
-                  </div>
+                <div className="results-stats">
+                  <span>{results.total_evaluated} universities reviewed</span>
+                  <span className="divider">•</span>
+                  <span>{results.matches?.length || 0} shortlist matches</span>
                 </div>
-              </div>
-
-              {results.summary && (
-                <div className="results-summary">
-                  <h3>📋 Summary</h3>
-                  <p>{results.summary}</p>
-                </div>
-              )}
-
-              <div className="results-list">
-                {results.matches?.map((match) => (
-                  <UniversityCard
-                    key={match.rank}
-                    match={match}
-                    isExpanded={expandedCard === match.rank}
-                    onToggle={() => setExpandedCard(expandedCard === match.rank ? null : match.rank)}
-                  />
-                ))}
               </div>
             </div>
-          )}
-        </div>
+
+            {results.summary && (
+              <div className="results-summary">
+                <span className="summary-kicker">Shortlist summary</span>
+                <p>{results.summary}</p>
+              </div>
+            )}
+
+            <div className="results-list">
+              {results.matches?.map((match) => (
+                <UniversityCard
+                  key={match.rank}
+                  match={match}
+                  isExpanded={expandedCard === match.rank}
+                  onToggle={() => setExpandedCard(expandedCard === match.rank ? null : match.rank)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

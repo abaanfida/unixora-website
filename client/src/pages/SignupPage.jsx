@@ -173,7 +173,7 @@ const SignupPage = () => {
                             onChange={handleChange}
                             required
                         />
-                        <label htmlFor="agree">I agree to the <a href="#" style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}>Terms & Conditions</a></label>
+                        <label htmlFor="agree">I agree to the <a href="#">Terms & Conditions</a></label>
                     </div>
 
                     <button type="submit" className="create-btn" disabled={isSubmitting}>
