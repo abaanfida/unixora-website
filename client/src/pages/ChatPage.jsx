@@ -102,7 +102,7 @@ const formatMessageText = (text) => {
 
 const FormattedMessage = ({ text, isBot }) => {
   if (!isBot) {
-    return <span>{text}</span>;
+    return <span className="plain-message-text">{text}</span>;
   }
 
   return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: formatMessageText(text) }} />;
