@@ -9,6 +9,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 const mongoUri = process.env.MONGO_URI || "mongodb://localhost:27017/fyp";
 const jwtSecret = process.env.JWT_SECRET || "fallback_secret_key";
+const groqApiKey = process.env.GROQ_API_KEY || "";
+const groqSttModel = process.env.GROQ_STT_MODEL || "whisper-large-v3-turbo";
 
 // Generate JWT token
 const generateToken = (user) => {
@@ -28,7 +30,48 @@ app.use(cors({
   origin: process.env.CLIENT_URL || '*',
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: "30mb" }));
+
+const mimeTypeToExtension = (mimeType = "") => {
+  if (mimeType.includes("webm")) return "webm";
+  if (mimeType.includes("ogg")) return "ogg";
+  if (mimeType.includes("mp4")) return "mp4";
+  if (mimeType.includes("wav")) return "wav";
+  return "webm";
+};
+
+const transcribeAudioWithGroq = async ({ audioBuffer, mimeType, language }) => {
+  if (!groqApiKey) {
+    throw new Error("Missing GROQ_API_KEY");
+  }
+
+  const formData = new FormData();
+  const extension = mimeTypeToExtension(mimeType);
+  const audioBlob = new Blob([audioBuffer], { type: mimeType || "audio/webm" });
+  formData.append("file", audioBlob, `voice-input.${extension}`);
+  formData.append("model", groqSttModel);
+  formData.append("response_format", "json");
+  formData.append("temperature", "0");
+
+  if (language) {
+    formData.append("language", language);
+  }
+
+  const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${groqApiKey}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Groq transcription failed: ${response.status} ${errorText}`);
+  }
+
+  return response.json();
+};
 
 mongoose
   .connect(mongoUri)
@@ -172,6 +215,28 @@ app.get("/api/auth/verify", (req, res) => {
     });
   } catch (err) {
     return res.status(401).json({ message: "Invalid or expired token." });
+  }
+});
+
+app.post("/api/voice/transcribe", async (req, res) => {
+  try {
+    const { audioBase64, mimeType = "audio/webm", language = "en" } = req.body;
+
+    if (!audioBase64) {
+      return res.status(400).json({ message: "Missing audio payload." });
+    }
+
+    const audioBuffer = Buffer.from(audioBase64, "base64");
+
+    if (audioBuffer.length === 0) {
+      return res.status(400).json({ message: "Empty audio payload." });
+    }
+
+    const transcription = await transcribeAudioWithGroq({ audioBuffer, mimeType, language });
+    return res.status(200).json({ text: transcription.text || "" });
+  } catch (err) {
+    console.error("Voice transcription error:", err.message);
+    return res.status(500).json({ message: "Unable to transcribe audio right now." });
   }
 });
 

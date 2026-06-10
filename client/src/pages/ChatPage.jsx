@@ -2,8 +2,18 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import WorkspaceNavbar from "../components/WorkspaceNavbar";
 import "../styles/ChatPage.css";
+import {
+  blobToBase64,
+  getVoiceRecorderSupport,
+  mergeTranscriptIntoInput,
+  shouldStopForSilence,
+} from "../utils/voiceRecorder";
 
 const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
+const APP_API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const VOICE_ACTIVITY_THRESHOLD = 0.018;
+const SILENCE_LIMIT_MS = 1200;
+const MAX_RECORDING_MS = 30000;
 
 const formatMessageText = (text) => {
   if (!text) return "";
@@ -173,15 +183,108 @@ const ChatPage = () => {
   const [error, setError] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
+  const [isVoiceSupported, setIsVoiceSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isTranscribingVoice, setIsTranscribingVoice] = useState(false);
+  const [voiceHint, setVoiceHint] = useState("");
   const messagesEndRef = useRef(null);
+  const recorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const silenceIntervalRef = useRef(null);
+  const maxRecordingTimeoutRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const speechDetectedRef = useRef(false);
+  const lastSpokeAtRef = useRef(0);
+  const voiceHintTimeoutRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const clearVoiceHintTimer = () => {
+    if (voiceHintTimeoutRef.current) {
+      window.clearTimeout(voiceHintTimeoutRef.current);
+      voiceHintTimeoutRef.current = null;
+    }
+  };
+
+  const showVoiceHint = (message) => {
+    clearVoiceHintTimer();
+    setVoiceHint(message);
+    voiceHintTimeoutRef.current = window.setTimeout(() => {
+      setVoiceHint("");
+      voiceHintTimeoutRef.current = null;
+    }, 2600);
+  };
+
+  const clearRecordingTimers = () => {
+    if (silenceIntervalRef.current) {
+      window.clearInterval(silenceIntervalRef.current);
+      silenceIntervalRef.current = null;
+    }
+
+    if (maxRecordingTimeoutRef.current) {
+      window.clearTimeout(maxRecordingTimeoutRef.current);
+      maxRecordingTimeoutRef.current = null;
+    }
+  };
+
+  const teardownRecorder = async () => {
+    clearRecordingTimers();
+
+    if (recorderRef.current) {
+      recorderRef.current.ondataavailable = null;
+      recorderRef.current.onstop = null;
+      recorderRef.current.onerror = null;
+      recorderRef.current = null;
+    }
+
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+
+    if (audioContextRef.current) {
+      await audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+
+    analyserRef.current = null;
+    audioChunksRef.current = [];
+    speechDetectedRef.current = false;
+    lastSpokeAtRef.current = 0;
+  };
+
+  const stopVoiceRecording = async () => {
+    clearRecordingTimers();
+
+    if (!recorderRef.current) return;
+    try {
+      if (recorderRef.current.state !== "inactive") {
+        recorderRef.current.stop();
+      }
+    } catch {
+      await teardownRecorder();
+      setIsListening(false);
+    }
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    const recorderSupport = getVoiceRecorderSupport(window, navigator);
+    setIsVoiceSupported(recorderSupport.isSupported);
+
+    return () => {
+      clearVoiceHintTimer();
+      clearRecordingTimers();
+      teardownRecorder().catch(() => {});
+    };
+  }, []);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -217,6 +320,11 @@ const ChatPage = () => {
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
+
+    if (isListening) {
+      await stopVoiceRecording();
+      setIsListening(false);
+    }
 
     const userMessage = { id: messages.length + 1, type: "user", text: inputValue };
     const newMessages = [...messages, userMessage];
@@ -266,6 +374,147 @@ const ChatPage = () => {
       ]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const transcribeAudio = async (audioBlob) => {
+    const audioBase64 = await blobToBase64(audioBlob);
+    const response = await fetch(`${APP_API_URL}/api/voice/transcribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        audioBase64,
+        mimeType: audioBlob.type || "audio/webm",
+        language: "en",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Transcription failed: ${response.status}`);
+    }
+
+    return response.json();
+  };
+
+  const beginSilenceDetection = () => {
+    const analyser = analyserRef.current;
+    if (!analyser) return;
+
+    const timeDomainData = new Float32Array(analyser.fftSize);
+
+    silenceIntervalRef.current = window.setInterval(async () => {
+      if (!analyserRef.current || !recorderRef.current || recorderRef.current.state === "inactive") {
+        return;
+      }
+
+      analyser.getFloatTimeDomainData(timeDomainData);
+
+      let sumSquares = 0;
+      for (let index = 0; index < timeDomainData.length; index += 1) {
+        sumSquares += timeDomainData[index] * timeDomainData[index];
+      }
+
+      const volume = Math.sqrt(sumSquares / timeDomainData.length);
+      const now = Date.now();
+
+      if (volume >= VOICE_ACTIVITY_THRESHOLD) {
+        speechDetectedRef.current = true;
+        lastSpokeAtRef.current = now;
+        return;
+      }
+
+      const silentForMs = lastSpokeAtRef.current ? now - lastSpokeAtRef.current : 0;
+
+      if (shouldStopForSilence({ speechDetected: speechDetectedRef.current, silentForMs, silenceLimitMs: SILENCE_LIMIT_MS })) {
+        await stopVoiceRecording();
+      }
+    }, 180);
+  };
+
+  const handleVoiceInput = async () => {
+    if (isLoading || isTranscribingVoice) return;
+
+    if (isListening) {
+      await stopVoiceRecording();
+      return;
+    }
+
+    const recorderSupport = getVoiceRecorderSupport(window, navigator);
+
+    if (!recorderSupport.isSupported) {
+      showVoiceHint("Voice input is not available here.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContextConstructor();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      analyser.fftSize = 2048;
+
+      const recorder = new MediaRecorder(stream, recorderSupport.mimeType ? { mimeType: recorderSupport.mimeType } : undefined);
+      const startedWithText = inputValue;
+      audioChunksRef.current = [];
+      speechDetectedRef.current = false;
+      lastSpokeAtRef.current = Date.now();
+
+      mediaStreamRef.current = stream;
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+      recorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || recorderSupport.mimeType || "audio/webm" });
+        setIsListening(false);
+        await teardownRecorder();
+
+        if (audioBlob.size === 0) {
+          showVoiceHint("No speech was detected.");
+          return;
+        }
+
+        try {
+          setIsTranscribingVoice(true);
+          const transcription = await transcribeAudio(audioBlob);
+          const transcriptText = transcription?.text || "";
+
+          if (!transcriptText.trim()) {
+            showVoiceHint("No speech was detected.");
+            return;
+          }
+
+          setInputValue(mergeTranscriptIntoInput(startedWithText, transcriptText));
+        } catch {
+          showVoiceHint("Voice input is unavailable right now.");
+        } finally {
+          setIsTranscribingVoice(false);
+        }
+      };
+
+      recorder.onerror = async () => {
+        setIsListening(false);
+        await teardownRecorder();
+        showVoiceHint("Voice input is unavailable right now.");
+      };
+
+      recorder.start();
+      setIsListening(true);
+      beginSilenceDetection();
+      maxRecordingTimeoutRef.current = window.setTimeout(async () => {
+        await stopVoiceRecording();
+      }, MAX_RECORDING_MS);
+    } catch {
+      setIsListening(false);
+      showVoiceHint("Voice input is not available here.");
     }
   };
 
@@ -416,13 +665,27 @@ const ChatPage = () => {
                   className="chat-input"
                   disabled={isLoading}
                 />
-                <button
-                  className={`send-btn ${isLoading ? "disabled" : ""}`}
-                  onClick={handleSendMessage}
-                  disabled={isLoading}
-                >
-                  {isLoading ? "..." : "->"}
-                </button>
+                <div className="chat-input-actions">
+                  <button
+                    type="button"
+                    className={`voice-btn ${isListening ? "active" : ""} ${!isVoiceSupported ? "inactive" : ""}`}
+                    onClick={handleVoiceInput}
+                    disabled={isLoading || isTranscribingVoice}
+                    aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                    title={isListening ? "Listening..." : isTranscribingVoice ? "Transcribing..." : "Use voice input"}
+                  >
+                    <span className="voice-btn-icon"></span>
+                  </button>
+                  {voiceHint && <div className="voice-hint-bubble">{voiceHint}</div>}
+                  <button
+                    type="button"
+                    className={`send-btn ${isLoading ? "disabled" : ""}`}
+                    onClick={handleSendMessage}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "..." : "->"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
