@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import WorkspaceNavbar from "../components/WorkspaceNavbar";
 import "../styles/MatcherPage.css";
+import { getMatcherLoadingMessage } from "../utils/matcherLoading";
 
 const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://127.0.0.1:8000";
 
@@ -55,6 +56,21 @@ const ProgramCard = ({ prog }) => (
         <p>{prog.career_prospects.join(", ")}</p>
       </div>
     )}
+  </div>
+);
+
+const MatcherLoadingState = ({ message }) => (
+  <div className="matcher-loading-state" aria-live="polite">
+    <div className="matcher-loading-orb">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div className="matcher-loading-copy">
+      <span className="summary-kicker">Shortlist in progress</span>
+      <h3>{message}</h3>
+      <p>We are comparing fit, preferences, fees, and program signals across the shortlist candidates.</p>
+    </div>
   </div>
 );
 
@@ -187,6 +203,8 @@ const MatcherPage = () => {
   const [error, setError] = useState(null);
   const [expandedCard, setExpandedCard] = useState(null);
   const [step, setStep] = useState(0);
+  const [loadingStartedAt, setLoadingStartedAt] = useState(null);
+  const [loadingElapsedMs, setLoadingElapsedMs] = useState(0);
 
   const [formData, setFormData] = useState({
     field_of_study: "",
@@ -217,6 +235,18 @@ const MatcherPage = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    if (!isLoading || !loadingStartedAt) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setLoadingElapsedMs(Date.now() - loadingStartedAt);
+    }, 500);
+
+    return () => window.clearInterval(intervalId);
+  }, [isLoading, loadingStartedAt]);
+
+  const loadingMessage = useMemo(() => getMatcherLoadingMessage(loadingElapsedMs), [loadingElapsedMs]);
+
   const handleInputChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (event) => {
@@ -224,6 +254,8 @@ const MatcherPage = () => {
     if (!formData.field_of_study) return;
 
     setIsLoading(true);
+    setLoadingStartedAt(Date.now());
+    setLoadingElapsedMs(0);
     setError(null);
     setResults(null);
 
@@ -268,6 +300,8 @@ const MatcherPage = () => {
       setError(`Failed to find matches: ${err.message}`);
     } finally {
       setIsLoading(false);
+      setLoadingStartedAt(null);
+      setLoadingElapsedMs(0);
     }
   };
 
@@ -378,6 +412,8 @@ const MatcherPage = () => {
                   ))}
                 </div>
               )}
+
+              {isLoading && <MatcherLoadingState message={loadingMessage} />}
 
               {step === 0 && (
                 <div className="form-section">
