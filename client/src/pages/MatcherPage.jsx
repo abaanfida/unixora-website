@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import WorkspaceNavbar from "../components/WorkspaceNavbar";
 import "../styles/MatcherPage.css";
+import { canSendMatcherRequest } from "../utils/matcherForm";
 import { getMatcherLoadingMessage } from "../utils/matcherLoading";
 
 const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://127.0.0.1:8000";
@@ -249,9 +250,12 @@ const MatcherPage = () => {
 
   const handleInputChange = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
 
-  const handleSubmit = async (event) => {
+  const handleFormSubmit = (event) => {
     if (event?.preventDefault) event.preventDefault();
-    if (!formData.field_of_study) return;
+  };
+
+  const handleSubmit = async () => {
+    if (!canSendMatcherRequest({ formData, isLoading, isExplicitGenerate: true })) return;
 
     setIsLoading(true);
     setLoadingStartedAt(Date.now());
@@ -396,7 +400,7 @@ const MatcherPage = () => {
               </div>
             </div>
 
-            <form className="matcher-form" onSubmit={handleSubmit}>
+            <form className="matcher-form" onSubmit={handleFormSubmit}>
               {!isLoading && (
                 <div className="step-progress">
                   {steps.map((stepName, index) => (
@@ -659,9 +663,10 @@ const MatcherPage = () => {
                   </button>
                 ) : (
                   <button
-                    type="submit"
+                    type="button"
                     className={`submit-btn ${isLoading ? "loading" : ""}`}
                     disabled={isLoading || !formData.field_of_study}
+                    onClick={handleSubmit}
                   >
                     {isLoading ? "Building shortlist..." : "Generate shortlist"}
                   </button>
